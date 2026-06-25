@@ -67,11 +67,11 @@ func getIconsMap() map[string]string {
 type Server struct {
 	addr     string
 	handlers *Handlers
-	wsHub    *ws.Hub // Ссылка на хаб для апгрейда HTTP до WebSocket
+	wsHub    *ws.ShardedHub // Ссылка на шардированный хаб
 }
 
 // NewServer создает HTTP сервер с роутингом (Mux).
-func NewServer(addr string, handlers *Handlers, wsHub *ws.Hub) *Server {
+func NewServer(addr string, handlers *Handlers, wsHub *ws.ShardedHub) *Server {
 	return &Server{
 		addr:     addr,
 		handlers: handlers,

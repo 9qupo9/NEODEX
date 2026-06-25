@@ -48,9 +48,9 @@ func main() {
 	
 	// ----------------------------------
 
-	// 5. Инициализация WebSocket Хаба
-	wsHub := ws.NewHub()
-	go wsHub.Run() // Запуск Event Loop в фоне
+	// 5. Инициализация WebSocket Хаба (Шардированный для масштабирования)
+	wsHub := ws.NewShardedHub(256) // 256 шардов для максимальной утилизации CPU
+	wsHub.Run() // Запуск Event Loops для каждого шарда
 	
 	// Горутина-мост: перекладываем JSON-сообщения из Engine Broadcaster в WS Hub
 	go func() {

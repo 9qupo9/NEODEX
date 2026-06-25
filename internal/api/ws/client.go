@@ -14,14 +14,14 @@ const magicString = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
 // Client описывает одного подключенного по WebSocket пользователя (например, вкладка в браузере).
 type Client struct {
-	conn net.Conn      // Сырое TCP-соединение, перехваченное из HTTP
-	hub  *Hub          // Ссылка на центральный хаб, рассылающий сообщения
-	send chan []byte   // Буферизированный канал для исходящих сообщений
+	conn  net.Conn      // Сырое TCP-соединение, перехваченное из HTTP
+	shard *Shard        // Ссылка на шард, рассылающий сообщения
+	send  chan []byte   // Буферизированный канал для исходящих сообщений
 }
 
 // Upgrade превращает обычный HTTP-запрос (GET) в постоянное двунаправленное WebSocket соединение.
 // Выполняется строго по спецификации RFC 6455 без сторонних зависимостей.
-func Upgrade(w http.ResponseWriter, r *http.Request, hub *Hub) {
+func Upgrade(w http.ResponseWriter, r *http.Request, shardedHub *ShardedHub) {
 	// Проверяем заголовки Upgrade
 	if r.Header.Get("Upgrade") != "websocket" {
 		http.Error(w, "Ожидался websocket", http.StatusBadRequest)
@@ -58,13 +58,14 @@ func Upgrade(w http.ResponseWriter, r *http.Request, hub *Hub) {
 	bufrw.WriteString(response)
 	bufrw.Flush()
 
-	// Создаем клиента
+	// Создаем клиента и назначаем ему шард
+	shard := shardedHub.GetShard()
 	client := &Client{
-		conn: conn,
-		hub:  hub,
-		send: make(chan []byte, 256), // Буфер на 256 сообщений
+		conn:  conn,
+		shard: shard,
+		send:  make(chan []byte, 256), // Буфер на 256 сообщений
 	}
-	client.hub.register <- client // Регистрируем в хабе
+	client.shard.register <- client // Регистрируем в назначенном шарде
 
 	// Запускаем две горутины на чтение и запись
 	go client.writePump()
@@ -75,7 +76,7 @@ func Upgrade(w http.ResponseWriter, r *http.Request, hub *Hub) {
 // В чистом Go для полноценного WS тут нужен парсинг фреймов с маскировкой (Masking).
 func (c *Client) readPump(rw *bufio.ReadWriter) {
 	defer func() {
-		c.hub.unregister <- c
+		c.shard.unregister <- c
 		c.conn.Close()
 	}()
 	// Упрощенная логика: мы просто следим за тем, не закрыл ли клиент соединение.

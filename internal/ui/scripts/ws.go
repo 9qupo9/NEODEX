@@ -13,7 +13,7 @@ function connectWS() {
     }
     
     const s = currentSymbol;
-    ws = new WebSocket("wss://stream.binance.com:9443/stream?streams=" + s + "@depth20@100ms/" + s + "@trade/" + s + "@ticker");
+    ws = new WebSocket("wss://stream.binance.com:9443/stream?streams=" + s + "@depth20@1000ms/" + s + "@trade/" + s + "@ticker");
     
     ws.onopen = () => {
         wsIntentionalClose = false;
@@ -29,7 +29,7 @@ function connectWS() {
         const stream = msg.stream;
         const data = msg.data;
         
-        if (stream.endsWith("@depth20@100ms")) {
+        if (stream.endsWith("@depth20@1000ms")) {
             renderOrderbook(data.asks, data.bids);
         } else if (stream.endsWith("@ticker")) {
             currentMarketPrice = parseFloat(data.c);
