@@ -72,3 +72,12 @@
 
 > [!NOTE]
 > Проект представляет собой крепкий фундамент. На этой базе можно легко реализовать подключение к Web3-кошелькам (MetaMask) или настоящему торговому API Binance по API-ключам для реальной торговли.
+
+---
+
+> [!CAUTION]
+> **LEGAL NOTICE & PROPRIETARY LICENSE**
+> 
+> This project is closed-source and is a strictly proprietary product. 
+> The use, running, copying, modification, merging, publishing, distribution, sublicensing, and/or sale of this software, in whole or in part, in any form or medium, is **STRICTLY PROHIBITED**. 
+> For full details, see the [LICENSE](file:///d:/DEX/LICENSE) file.
