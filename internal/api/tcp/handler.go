@@ -1,19 +1,22 @@
 package tcp
 
 import (
+	"dex/internal/domain"
 	"dex/internal/engine"
+	"dex/pkg/decimal"
+	"encoding/binary"
 	"log"
 	"net"
 )
 
 // Handler отвечает за бизнес-логику обработки входящих TCP соединений.
 type Handler struct {
-	Engine *engine.Engine // Ссылка на торговое ядро (очевидно, в реальной бирже тут будет роутер на несколько Engine для разных пар)
+	Router *engine.EngineRouter
 }
 
 // NewHandler создает новый обработчик TCP.
-func NewHandler(e *engine.Engine) *Handler {
-	return &Handler{Engine: e}
+func NewHandler(r *engine.EngineRouter) *Handler {
+	return &Handler{Router: r}
 }
 
 // HandleConnection вызывается для каждого нового подключившегося TCP-клиента (например, HFT-бота).
@@ -37,13 +40,78 @@ func (h *Handler) HandleConnection(conn net.Conn) {
 			_ = WriteMsg(conn, MsgTypePing, []byte("pong"))
 			
 		case MsgTypeOrder:
-			// TODO: Распарсить msg.Payload (например, из Protobuf в domain.Order).
-			// В рамках прототипа мы просто шлем подтверждение получения (ACK - Acknowledgment).
-			
-			// trade, err := h.Engine.PlaceOrder(parsedOrder)
-			// if err != nil { ... }
-			
-			_ = WriteMsg(conn, MsgTypeOrder, []byte("ack"))
+			// Десериализация бинарного payload
+			if len(msg.Payload) != 66 {
+				log.Printf("TCP: Неверная длина payload для ордера: %d", len(msg.Payload))
+				_ = WriteMsg(conn, MsgTypeOrder, []byte{0x00}) // 0x00 - Error
+				continue
+			}
+
+			// Парсинг AccountID (32 bytes)
+			accBytes := msg.Payload[0:32]
+			accLen := 0
+			for i, b := range accBytes {
+				if b == 0 {
+					accLen = i
+					break
+				}
+				accLen = 32
+			}
+			accountID := string(accBytes[:accLen])
+
+			// Парсинг активов (по 8 байт)
+			baseBytes := msg.Payload[32:40]
+			baseLen := 0
+			for i, b := range baseBytes {
+				if b == 0 {
+					baseLen = i
+					break
+				}
+				baseLen = 8
+			}
+			base := string(baseBytes[:baseLen])
+
+			quoteBytes := msg.Payload[40:48]
+			quoteLen := 0
+			for i, b := range quoteBytes {
+				if b == 0 {
+					quoteLen = i
+					break
+				}
+				quoteLen = 8
+			}
+			quote := string(quoteBytes[:quoteLen])
+
+			side := domain.Buy
+			if msg.Payload[48] == 1 {
+				side = domain.Sell
+			}
+
+			orderType := domain.Limit
+			if msg.Payload[49] == 1 {
+				orderType = domain.Market
+			}
+
+			// Парсинг цены и количества (uint64)
+			priceRaw := binary.BigEndian.Uint64(msg.Payload[50:58])
+			qtyRaw := binary.BigEndian.Uint64(msg.Payload[58:66])
+
+			// Конвертация в decimal (делим на 10^8)
+			priceDec := decimal.NewFromInt(int64(priceRaw)).Div(decimal.NewFromInt(100000000))
+			qtyDec := decimal.NewFromInt(int64(qtyRaw)).Div(decimal.NewFromInt(100000000))
+
+			pair := domain.Pair{BaseAsset: base, QuoteAsset: quote}
+			order := domain.NewOrder("tcp-"+accountID[:4], accountID, pair, side, orderType, priceDec, qtyDec)
+
+			// Передаем в роутер
+			trades, err := h.Router.PlaceOrder(order)
+			if err != nil {
+				_ = WriteMsg(conn, MsgTypeOrder, []byte{0x00}) // 0x00 - Error
+			} else {
+				// 0x01 - Success, возвращаем количество сделок как 1 байт
+				ack := []byte{0x01, byte(len(trades))}
+				_ = WriteMsg(conn, MsgTypeOrder, ack)
+			}
 		}
 	}
 }

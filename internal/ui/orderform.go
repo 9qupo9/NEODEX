@@ -4,9 +4,7 @@ func RenderOrderForm() string {
 	return `
 	<div class="order-form-panel">
 		<div class="order-tabs" id="orderTypeTabs">
-			<div class="tab" data-type="LIMIT">Limit</div>
 			<div class="tab active" data-type="MARKET">Market</div>
-			<div class="tab" data-type="STOP_LIMIT">Stop-Limit</div>
 		</div>
 
 		<!-- Quote Currency Tabs (like Binance) -->
@@ -76,7 +74,7 @@ func RenderOrderForm() string {
 			</div>
 			
 			<div class="action-row" style="margin-top: 10px;">
-				<button class="btn btn-main btn-buy" id="submitOrderBtn" onclick="submitOrder()">Buy BTC</button>
+				<button class="btn btn-main btn-buy" id="submitOrderBtn">Buy BTC</button>
 			</div>
 		</div>
 		

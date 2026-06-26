@@ -111,6 +111,26 @@ func (a *Account) DeductLocked(asset string, amount decimal.Decimal) {
 	a.Locked[asset] = locked.Sub(amount)
 }
 
+// SettleTrade атомарно применяет изменения балансов по сделке к аккаунту.
+func (a *Account) SettleTrade(depositAsset string, depositAmount decimal.Decimal, deductAsset string, deductAmount decimal.Decimal) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	// Зачисляем
+	if current, exists := a.Balances[depositAsset]; exists {
+		a.Balances[depositAsset] = current.Add(depositAmount)
+	} else {
+		a.Balances[depositAsset] = depositAmount
+	}
+
+	// Списываем замороженные
+	if locked, exists := a.Locked[deductAsset]; exists {
+		if locked.Cmp(deductAmount) >= 0 {
+			a.Locked[deductAsset] = locked.Sub(deductAmount)
+		}
+	}
+}
+
 // GetBalance возвращает копию текущего доступного баланса по указанному активу.
 func (a *Account) GetBalance(asset string) decimal.Decimal {
 	a.mu.RLock()

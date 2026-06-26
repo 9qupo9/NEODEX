@@ -3,6 +3,7 @@ package ui
 import (
 	"dex/internal/ui/scripts"
 	"dex/internal/ui/styles"
+	"dex/internal/ui/walletconnect"
 )
 
 func RenderMarketsPage() string {
@@ -108,11 +109,10 @@ func RenderMarketsPage() string {
 								<th class="right-align hide-mobile">Market Cap</th>
                                 <th class="right-align hide-mobile">24h Volume</th>
                                 <th class="center-align hide-mobile">Trend</th>
-                                <th class="right-align hide-mobile">Action</th>
                             </tr>
                         </thead>
                         <tbody id="marketsTableBody">
-                            <tr><td colspan="8" style="text-align: center; padding: 40px;">Loading markets data...</td></tr>
+                            <tr><td colspan="7" style="text-align: center; padding: 40px;">Loading markets data...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -121,6 +121,7 @@ func RenderMarketsPage() string {
     </div>
 
     <script>
+        ` + walletconnect.NewWalletConnectService().GetScript() + `
         ` + scripts.RenderMarketsScripts() + `
     </script>
 </body>

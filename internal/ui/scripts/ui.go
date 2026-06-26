@@ -23,7 +23,8 @@ if (tabBtns) {
 	});
 }
 
-let currentHistoryTab = 'open'; // 'open' or 'history'
+const isFuturesInit = window.location.pathname.startsWith('/futures');
+let currentHistoryTab = isFuturesInit ? 'positions' : 'open'; 
 if (historyTabBtns) {
     historyTabBtns.forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -37,6 +38,9 @@ if (historyTabBtns) {
             e.target.style.borderBottomColor = 'var(--color-accent)';
             currentHistoryTab = e.target.getAttribute('data-tab');
             renderOrders(window.allUserOrders || []);
+            if (typeof renderPositions === 'function') {
+                renderPositions(window.allUserPositions || []);
+            }
         });
     });
 }
@@ -334,9 +338,11 @@ function updateUI() {
     if (qtySuffix)   qtySuffix.innerText   = currentBase;
     
     // 1. Update button style, text, and slider color mode
+    submitBtn.onclick = submitOrder;
+    const isFutures = window.location.pathname.startsWith('/futures');
     if (currentSide === 'BUY') {
         submitBtn.className = 'btn btn-main btn-buy';
-        submitBtn.innerText = 'Buy ' + currentBase;
+        submitBtn.innerText = isFutures ? ('Open Long ' + currentBase) : ('Buy ' + currentBase);
         if (availBalanceEl) availBalanceEl.innerText = availUSDT.toFixed(2) + ' ' + currentQuote;
         if (sliderContainer) {
             sliderContainer.classList.remove('sell-mode');
@@ -344,7 +350,7 @@ function updateUI() {
         }
     } else {
         submitBtn.className = 'btn btn-main btn-sell';
-        submitBtn.innerText = 'Sell ' + currentBase;
+        submitBtn.innerText = isFutures ? ('Open Short ' + currentBase) : ('Sell ' + currentBase);
         if (availBalanceEl) availBalanceEl.innerText = availBase.toFixed(8) + ' ' + currentBase;
         if (sliderContainer) {
             sliderContainer.classList.remove('buy-mode');

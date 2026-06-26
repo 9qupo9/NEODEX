@@ -35,7 +35,7 @@ func RenderMarketsScripts() string {
 			renderTable();
 		} catch (err) {
 			console.error(err);
-			tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color: var(--color-sell);">Error loading market data</td></tr>';
+			tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color: var(--color-sell);">Error loading market data</td></tr>';
 		}
 	}
 
@@ -163,7 +163,7 @@ func RenderMarketsScripts() string {
 		}
 
 		if (filtered.length === 0) {
-			tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">No coins found</td></tr>';
+			tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">No coins found</td></tr>';
 			return;
 		}
 
@@ -204,9 +204,7 @@ func RenderMarketsScripts() string {
 					<td class="center-align hide-mobile">
 						${generateSparkline(change)}
 					</td>
-					<td class="right-align hide-mobile">
-						<button class="action-btn">Trade</button>
-					</td>
+
 				</tr>
 			` + "`" + `;
 		});

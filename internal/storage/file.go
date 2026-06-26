@@ -1,6 +1,8 @@
 package storage
 
 import (
+	"dex/internal/domain"
+	"dex/pkg/decimal"
 	"encoding/json"
 	"os"
 	"sync"
@@ -18,12 +20,11 @@ type FileStore struct {
 
 // LogEntry представляет одну мутационную операцию, записанную на диск
 type LogEntry struct {
-	Type    string      `json:"type"`    // Тип операции (например, "save_trade", "update_order")
-	Payload interface{} `json:"payload"` // Само тело измененного объекта
+	Type    string          `json:"type"`    // Тип операции (например, "save_trade", "update_order")
+	Payload json.RawMessage `json:"payload"` // Само тело измененного объекта
 }
 
 // NewFileStore создает файл лога (если его нет) и восстанавливает in-memory стейт из него.
-// TODO: Добавить создание Snapshot-файлов, чтобы не читать гигабайты логов при старте.
 func NewFileStore(filePath string) (*FileStore, error) {
 	memStore := NewMemoryStore()
 	
@@ -48,15 +49,55 @@ func NewFileStore(filePath string) (*FileStore, error) {
 // recoverState читает AOF-файл строка за строкой (JSON Lines) 
 // и реконструирует MemoryStore.
 func (fs *FileStore) recoverState() error {
-	// Декодирование JSON потоком для экономии памяти
+	// Сбрасываем указатель файла в начало
+	fs.file.Seek(0, 0)
 	decoder := json.NewDecoder(fs.file)
 	for decoder.More() {
 		var entry LogEntry
 		if err := decoder.Decode(&entry); err != nil {
 			return err
 		}
-		// Здесь должна быть логика применения payload к MemoryStore в зависимости от entry.Type
-		// В рамках прототипа мы этот бойлерплейт с рефлексией/свитчами опускаем.
+		
+		switch entry.Type {
+		case "create_account":
+			var address string
+			if err := json.Unmarshal(entry.Payload, &address); err == nil {
+				fs.MemoryStore.CreateAccount(address)
+			}
+		case "save_order":
+			var order domain.Order
+			if err := json.Unmarshal(entry.Payload, &order); err == nil {
+				fs.MemoryStore.SaveOrder(&order)
+			}
+		case "update_order":
+			var order domain.Order
+			if err := json.Unmarshal(entry.Payload, &order); err == nil {
+				fs.MemoryStore.UpdateOrder(&order)
+			}
+		case "settle_trade":
+			var trade domain.Trade
+			if err := json.Unmarshal(entry.Payload, &trade); err == nil {
+				fs.MemoryStore.SettleTradeBalances(&trade)
+			}
+		case "save_position":
+			var position domain.Position
+			if err := json.Unmarshal(entry.Payload, &position); err == nil {
+				fs.MemoryStore.SavePosition(&position)
+			}
+		case "deposit":
+			var payload struct {
+				Address string `json:"address"`
+				Asset   string `json:"asset"`
+				Amount  string `json:"amount"`
+			}
+			if err := json.Unmarshal(entry.Payload, &payload); err == nil {
+				if acc, err := fs.MemoryStore.GetAccount(payload.Address); err == nil {
+					if amt, err := decimal.NewFromString(payload.Amount); err == nil {
+						acc.Deposit(payload.Asset, amt)
+					}
+				}
+			}
+		}
 	}
 	return nil
 }
@@ -66,7 +107,12 @@ func (fs *FileStore) appendLog(t string, payload interface{}) error {
 	fs.mu.Lock()
 	defer fs.mu.Unlock()
 	
-	entry := LogEntry{Type: t, Payload: payload}
+	bPayload, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+	
+	entry := LogEntry{Type: t, Payload: bPayload}
 	b, err := json.Marshal(entry)
 	if err != nil {
 		return err
@@ -76,12 +122,45 @@ func (fs *FileStore) appendLog(t string, payload interface{}) error {
 	return err
 }
 
-// TODO: Здесь необходимо переопределить методы SaveAccount, SaveOrder, SaveTrade из MemoryStore.
-// Пример: 
-// func (fs *FileStore) SaveTrade(trade *domain.Trade) error {
-//    fs.MemoryStore.SaveTrade(trade) // обновляем оперативку
-//    return fs.appendLog("save_trade", trade) // сохраняем на диск
-// }
+func (fs *FileStore) CreateAccount(address string) (*domain.Account, error) {
+	acc, err := fs.MemoryStore.CreateAccount(address)
+	if err == nil {
+		fs.appendLog("create_account", address)
+	}
+	return acc, err
+}
+
+func (fs *FileStore) SaveOrder(order *domain.Order) error {
+	err := fs.MemoryStore.SaveOrder(order)
+	if err == nil {
+		fs.appendLog("save_order", order)
+	}
+	return err
+}
+
+func (fs *FileStore) UpdateOrder(order *domain.Order) error {
+	err := fs.MemoryStore.UpdateOrder(order)
+	if err == nil {
+		fs.appendLog("update_order", order)
+	}
+	return err
+}
+
+func (fs *FileStore) SettleTradeBalances(trade *domain.Trade) error {
+	err := fs.MemoryStore.SettleTradeBalances(trade)
+	if err == nil {
+		fs.appendLog("settle_trade", trade)
+	}
+	return err
+}
+
+func (fs *FileStore) SavePosition(position *domain.Position) error {
+	err := fs.MemoryStore.SavePosition(position)
+	if err == nil {
+		fs.appendLog("save_position", position)
+	}
+	return err
+}
 
 // Close закрывает файловый дескриптор при gracefully shutdown.
 func (fs *FileStore) Close() error {

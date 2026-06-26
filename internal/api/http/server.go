@@ -90,6 +90,10 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/api/v1/orderbook", s.handlers.HandleGetOrderbook)
 	mux.HandleFunc("/api/v1/balance", s.handlers.HandleGetBalance)
 	mux.HandleFunc("/api/v1/orders", s.handlers.HandleGetOrders)
+
+	// Фьючерсные маршруты
+	mux.HandleFunc("/api/v1/futures/order", s.handlers.HandlePlaceFuturesOrder)
+	mux.HandleFunc("/api/v1/futures/positions", s.handlers.HandleGetFuturesPositions)
 	
 	// Initialize New Listings Scanner
 	InitScanner()
@@ -170,12 +174,11 @@ func (s *Server) Start() error {
 		w.Write([]byte(ui.RenderSpotPage()))
 	})
 
-	// Wallet / Portfolio Dashboard
-	mux.HandleFunc("/wallet", func(w http.ResponseWriter, r *http.Request) {
+	// Futures Trading Terminal
+	mux.HandleFunc("/futures", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.Write([]byte(ui.RenderWalletPage()))
+		w.Write([]byte(ui.RenderFuturesPage()))
 	})
-
 	log.Printf("HTTP REST сервер запущен на %s", s.addr)
 	return http.ListenAndServe(s.addr, mux)
 }

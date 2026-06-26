@@ -42,6 +42,12 @@ type Order struct {
 	FilledQty    decimal.Decimal // Количество, которое уже было исполнено
 	Status       OrderStatus     // Текущий статус
 	CreatedAt    int64           // Время создания в Unix nanoseconds для точной сортировки FIFO в стакане
+
+	// Специфичные поля для Фьючерсов (Derivatives)
+	IsFutures    bool       // true, если это фьючерсный ордер
+	Leverage     int        // Плечо (от 1 до 100)
+	MarginMode   MarginMode // ISOLATED или CROSS
+	ReduceOnly   bool       // Если true, ордер может только уменьшать позицию, но не увеличивать/открывать новую
 }
 
 // UnfilledQty возвращает объем ордера, который еще ожидает исполнения.

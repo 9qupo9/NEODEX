@@ -15,7 +15,7 @@ import (
 // чтобы не блокировать другие пары.
 type Engine struct {
 	Pair     domain.Pair                  // Торговая пара этого движка
-	Store    *storage.MemoryStore         // Ссылка на глобальное хранилище балансов
+	Store    storage.Store                // Ссылка на глобальное хранилище балансов
 	Book     *orderbook.Book              // Книга ордеров (стакан)
 	Matcher  *matching.Matcher            // Движок сведения
 	Settler  *settlement.Settler          // Движок расчетов (клиринга)
@@ -24,7 +24,7 @@ type Engine struct {
 }
 
 // NewEngine инициализирует и запускает все внутренние подсистемы торговой пары.
-func NewEngine(pair domain.Pair, store *storage.MemoryStore, wsOut chan []byte) *Engine {
+func NewEngine(pair domain.Pair, store storage.Store, wsOut chan []byte) *Engine {
 	book := orderbook.NewBook(pair)
 	matcher := matching.NewMatcher(book)
 	

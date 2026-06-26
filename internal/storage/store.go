@@ -43,4 +43,12 @@ type Store interface {
 	
 	// SaveTrade сохраняет завершенную сделку в историю.
 	SaveTrade(trade *domain.Trade) error
+
+	// SettleTradeBalances атомарно сохраняет сделку и обновляет балансы
+	SettleTradeBalances(trade *domain.Trade) error
+
+	// Positions (Позиции для фьючерсов)
+	GetPositionsByAccount(address string) ([]*domain.Position, error)
+	GetPosition(id string) (*domain.Position, error)
+	SavePosition(position *domain.Position) error
 }

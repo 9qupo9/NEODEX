@@ -17,9 +17,11 @@ fetchBinanceSymbols().then(() => {
 
 fetchBalance();
 fetchOrders();
+if (typeof fetchPositions === 'function') fetchPositions();
 connectWS();
 
 setInterval(fetchBalance, 5000);
 setInterval(fetchOrders, 5000);
+if (typeof fetchPositions === 'function') setInterval(fetchPositions, 5000);
 `
 }

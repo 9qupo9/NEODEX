@@ -2,7 +2,6 @@ package scripts
 
 func State() string {
 	return `
-const USER_ID = "test_user_1"; 
 let ws;
 
 const asksContainer = document.getElementById('asksContainer');

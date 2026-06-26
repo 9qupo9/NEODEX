@@ -25,6 +25,9 @@ func Vars() string {
     --color-accent: #9ca3af;
     --color-accent-hover: #e5e7eb;
     
+    /* Primary / Brand color */
+    --primary-color: #3468d0;
+    
     --font-ui: 'Inter', sans-serif;
     --font-mono: 'Roboto Mono', monospace;
     

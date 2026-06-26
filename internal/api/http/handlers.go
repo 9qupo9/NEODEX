@@ -1,22 +1,26 @@
 package http
 
 import (
-	"encoding/json"
-	"net/http"
 	"dex/internal/domain"
 	"dex/internal/engine"
+	"dex/internal/storage"
 	"dex/pkg/decimal"
 	"dex/pkg/id"
+	"encoding/json"
+	"net/http"
+	"strings"
 )
 
 // Handlers объединяет все методы для HTTP REST API.
 type Handlers struct {
-	Engine *engine.Engine // Ссылка на ядро
+	Router        *engine.EngineRouter  // Маршрутизатор спотовых движков
+	FuturesEngine *engine.FuturesEngine // Ссылка на фьючерсное ядро (пока одно для тестов)
+	Store         storage.Store
 }
 
 // NewHandlers создает экземпляр обработчиков.
-func NewHandlers(e *engine.Engine) *Handlers {
-	return &Handlers{Engine: e}
+func NewHandlers(r *engine.EngineRouter, f *engine.FuturesEngine, store storage.Store) *Handlers {
+	return &Handlers{Router: r, FuturesEngine: f, Store: store}
 }
 
 // OrderRequest — структура входящего JSON для создания ордера.
@@ -50,8 +54,8 @@ func (h *Handlers) HandlePlaceOrder(w http.ResponseWriter, r *http.Request) {
 	pair := domain.Pair{BaseAsset: req.Base, QuoteAsset: req.Quote}
 	order := domain.NewOrder(id.New(), req.AccountID, pair, domain.Side(req.Side), domain.OrderType(req.Type), price, qty)
 
-	// Передаем ордер в движок (блокирующе, но очень быстро, так как всё in-memory)
-	trades, err := h.Engine.PlaceOrder(order)
+	// Передаем ордер в маршрутизатор движков (EngineRouter)
+	trades, err := h.Router.PlaceOrder(order)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -65,16 +69,33 @@ func (h *Handlers) HandlePlaceOrder(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// HandleGetOrderbook (GET /api/v1/orderbook) возвращает срез текущего стакана (глубину рынка).
+// HandleGetOrderbook (GET /api/v1/orderbook?symbol=...) возвращает срез текущего стакана (глубину рынка).
 func (h *Handlers) HandleGetOrderbook(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
+
+	symbol := r.URL.Query().Get("symbol")
+	if symbol == "" {
+		symbol = "BTC_USDT" // Default for backward compatibility
+	}
 	
+	parts := strings.Split(symbol, "_")
+	if len(parts) != 2 {
+		http.Error(w, "invalid symbol format, expected BASE_QUOTE", http.StatusBadRequest)
+		return
+	}
+	base := parts[0]
+	quote := parts[1]
+
 	// Получаем топ 50 уровней
-	depth := h.Engine.GetDepth(50)
-	
+	depth, err := h.Router.GetDepth(base, quote, 50)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(depth)
 }
@@ -91,7 +112,7 @@ func (h *Handlers) HandleGetOrders(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	orders, err := h.Engine.Store.GetOrdersByAccount(accountId)
+	orders, err := h.Store.GetOrdersByAccount(accountId)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -100,7 +121,6 @@ func (h *Handlers) HandleGetOrders(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(orders)
 }
-
 
 // HandleGetBalance (GET /api/v1/balance?accountId=...) возвращает доступные средства пользователя.
 func (h *Handlers) HandleGetBalance(w http.ResponseWriter, r *http.Request) {
@@ -114,14 +134,14 @@ func (h *Handlers) HandleGetBalance(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	acc, err := h.Engine.Store.GetAccount(accountId)
+	acc, err := h.Store.GetAccount(accountId)
 	if err != nil {
 		http.Error(w, "account not found", http.StatusNotFound)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	
+
 	// Конвертируем балансы из Decimal в строки (чтобы не терять точность в JSON / JS)
 	balMap := make(map[string]string)
 	for k, v := range acc.Balances {
@@ -142,7 +162,7 @@ func (h *Handlers) HandleCancelOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.Engine.CancelOrder(orderId); err != nil {
+	if err := h.Router.CancelOrder(orderId, h.Store); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}

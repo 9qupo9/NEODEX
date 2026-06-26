@@ -95,9 +95,22 @@ func (c *Client) writePump() {
 	for msg := range c.send {
 		// Оборачиваем данные в текстовый фрейм (Text Frame, FIN=1, Opcode=1)
 		// 0x81 = 1000 0001
-		// Поддержка сообщений < 126 байт. Для больших сообщений нужен расширенный заголовок длины.
-		// TODO: Добавить корректный энкодер длины > 125 байт.
-		header := []byte{0x81, byte(len(msg))}
+		length := len(msg)
+		var header []byte
+
+		if length < 126 {
+			header = []byte{0x81, byte(length)}
+		} else if length <= 65535 {
+			header = []byte{0x81, 126, 0, 0}
+			header[2] = byte(length >> 8)
+			header[3] = byte(length)
+		} else {
+			header = []byte{0x81, 127, 0, 0, 0, 0, 0, 0, 0, 0}
+			for i := 0; i < 8; i++ {
+				header[9-i] = byte(length >> (8 * i))
+			}
+		}
+
 		c.conn.Write(append(header, msg...))
 	}
 }

@@ -24,8 +24,10 @@ func main() {
 	cfg, _ := config.LoadConfig("config.json")
 
 	// 2. Инициализация хранилища (балансы, стейт)
-	// В продакшене тут будет NewFileStore для персистентности, но пока используем Memory для максимальной скорости.
-	store := storage.NewMemoryStore()
+	store, err := storage.NewFileStore("dex_state.aof")
+	if err != nil {
+		log.Fatalf("Ошибка загрузки хранилища: %v", err)
+	}
 
 	// 3. Создаем торговую пару с правилами (Tick Size, Lot Size)
 	pair := domain.Pair{
@@ -35,16 +37,32 @@ func main() {
 		QtyStep:    decimal.MustParse("0.0001"),
 	}
 
-	// 4. Инициализация Торгового Ядра (Engine + Matcher + Settler + OrderBook)
+	// 4. Инициализация Торговых Ядер и Маршрутизатора
+	router := engine.NewEngineRouter()
+
 	// Добавляем Broadcaster для рассылки рыночных данных по WebSocket
 	fromEngine := make(chan []byte, 1024)
 	eng := engine.NewEngine(pair, store, fromEngine)
+	futuresEng := engine.NewFuturesEngine(pair, store, fromEngine)
+	
+	router.RegisterEngine(eng) // Регистрация BTC_USDT в роутере
+
+	// Можно добавить еще пару для тестов, например ETH/USDT
+	ethPair := domain.Pair{
+		BaseAsset:  "ETH",
+		QuoteAsset: "USDT",
+		PriceStep:  decimal.MustParse("0.01"),
+		QtyStep:    decimal.MustParse("0.0001"),
+	}
+	ethEng := engine.NewEngine(ethPair, store, fromEngine)
+	router.RegisterEngine(ethEng)
 
 	// -- МОК ДАННЫХ ДЛЯ ТЕСТИРОВАНИЯ --
 	// Печатаем немного тестовых денег пользователю, чтобы он мог отправить ордер
 	acc, _ := store.CreateAccount("test_user_1")
 	acc.Deposit("USDT", decimal.MustParse("100000"))
 	acc.Deposit("BTC", decimal.MustParse("10"))
+	acc.Deposit("ETH", decimal.MustParse("50"))
 	
 	// ----------------------------------
 
@@ -60,7 +78,7 @@ func main() {
 	}()
 
 	// 6. Инициализация низкоуровневого TCP сервера (для HFT ботов)
-	tcpHandler := tcp.NewHandler(eng)
+	tcpHandler := tcp.NewHandler(router)
 	tcpServer := tcp.NewServer(cfg.TcpAddr, tcpHandler)
 	go func() {
 		if err := tcpServer.Start(); err != nil {
@@ -69,7 +87,7 @@ func main() {
 	}()
 
 	// 7. Инициализация HTTP REST сервера (передаем и ядро, и WS хаб)
-	httpHandlers := http.NewHandlers(eng)
+	httpHandlers := http.NewHandlers(router, futuresEng, store)
 	httpServer := http.NewServer(cfg.HttpAddr, httpHandlers, wsHub)
 	go func() {
 		if err := httpServer.Start(); err != nil {

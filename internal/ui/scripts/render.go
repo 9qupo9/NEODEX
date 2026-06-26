@@ -186,5 +186,72 @@ function renderOrders(orders) {
 		` + "`" + `;
     });
 }
+
+function renderPositions(positions) {
+    const isFutures = window.location.pathname.startsWith('/futures');
+    if (!isFutures) return;
+    
+    const posTable = document.getElementById('positionsTable');
+    const posTableBody = document.getElementById('positionsTableBody');
+    const emptyState = document.getElementById('historyEmptyState');
+    const emptyText = document.getElementById('historyEmptyText');
+    const posTabBtn = document.querySelector('.history-tab-btn[data-tab="positions"]');
+
+    if (currentHistoryTab !== 'positions') {
+        if (posTable) posTable.style.display = 'none';
+        // Only update badge count if needed, don't change visibility
+        if (posTabBtn && positions) posTabBtn.innerText = 'Positions(' + positions.length + ')';
+        return;
+    }
+
+    if (!positions || positions.length === 0) {
+        if (posTable) posTable.style.display = 'none';
+        if (emptyState) emptyState.style.display = 'flex';
+        if (emptyText) emptyText.innerText = 'No Open Positions';
+        if (posTabBtn) posTabBtn.innerText = 'Positions(0)';
+        return;
+    }
+
+    if (posTable) posTable.style.display = 'table';
+    if (emptyState) emptyState.style.display = 'none';
+    if (posTabBtn) posTabBtn.innerText = 'Positions(' + positions.length + ')';
+
+    if (!posTableBody) return;
+    posTableBody.innerHTML = '';
+    
+    positions.forEach(p => {
+        const sideColor = p.side === 'BUY' ? 'var(--color-buy)' : 'var(--color-sell)';
+        const sideText = p.side === 'BUY' ? 'Long ' + p.leverage + 'x' : 'Short ' + p.leverage + 'x';
+        
+        // Mock PnL logic for demo
+        const entry = parseFloat(p.entryPrice);
+        const size = parseFloat(p.size);
+        const markPrice = currentMarketPrice > 0 ? currentMarketPrice : entry; // Fallback
+        
+        let pnl = 0;
+        if (entry > 0 && size > 0) {
+            if (p.side === 'BUY') {
+                pnl = (markPrice - entry) * size;
+            } else {
+                pnl = (entry - markPrice) * size;
+            }
+        }
+        
+        const pnlColor = pnl >= 0 ? 'var(--color-buy)' : 'var(--color-sell)';
+        const pnlStr = (pnl > 0 ? '+' : '') + pnl.toFixed(2);
+        const liqPrice = parseFloat(p.liquidationPrice).toFixed(2);
+
+        posTableBody.innerHTML += ` + "`" + `
+			<tr>
+				<td><strong>${p.pair.BaseAsset}/${p.pair.QuoteAsset}</strong><br><span style="font-size:10px;color:var(--text-muted)">${p.marginMode}</span></td>
+				<td style="color:${sideColor}; font-weight: 500;">${sideText}</td>
+				<td style="font-family:var(--font-mono)">${size.toFixed(4)}</td>
+				<td style="font-family:var(--font-mono)">${entry.toFixed(2)}</td>
+				<td style="font-family:var(--font-mono); color:var(--color-accent)">${liqPrice > 0 ? liqPrice : '--'}</td>
+                <td style="font-family:var(--font-mono); color:${pnlColor}; text-align:right;">${pnlStr}</td>
+			</tr>
+		` + "`" + `;
+    });
+}
 `
 }
