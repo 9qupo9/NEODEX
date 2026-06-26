@@ -1,87 +1,87 @@
-# NEODEX: Полный обзор проекта 🚀
+# NEODEX: Full Project Overview 
 
-**NEODEX** — это полноценная симуляция криптовалютной биржи (DEX / CEX интерфейса) с профессиональным терминалом, живыми котировками и продвинутой архитектурой. Проект написан на **Golang** (бэкенд) с использованием чистого **HTML/CSS/JS** на фронтенде без тяжелых фреймворков.
+**NEODEX** is a comprehensive cryptocurrency exchange simulation (DEX / CEX interface) featuring a professional trading terminal, live market data, and an advanced architecture. The project is built with a **Golang** backend and uses pure **HTML/CSS/JS** for the frontend, entirely avoiding heavy frameworks.
 
-В этом документе собрано полное описание всех функций, которые мы реализовали на данный момент.
+This document provides a complete description of all implemented features.
 
 ---
 
-## 💻 1. Пользовательские интерфейсы (Фронтенд)
+## 1. User Interface (Frontend)
 
-Мы создали современный интерфейс в стиле топовых криптобирж (Binance, Bybit) с темной темой, красивыми градиентами и мгновенным откликом.
+We have designed a modern, highly responsive UI inspired by top crypto exchanges (such as Binance and Bybit), featuring a dark theme, beautiful gradients, and instantaneous feedback.
 
-### Главная страница (Markets)
-- **Глобальная статистика**: Бегущая панель сверху показывает общую капитализацию, объем торгов за 24 часа и доминацию BTC, которые динамически высчитываются на лету.
-- **Интерактивные виджеты (Highlight Cards)**: 
+### Main Page (Markets)
+- **Global Statistics**: A scrolling marquee at the top displaying total market capitalization, 24-hour trading volume, and BTC dominance, all calculated dynamically in real time.
+- **Interactive Highlight Cards**:
   - *Top Gainers*, *Hot Coins*, *Top Volume*.
-  - *New Listings*: Специальный динамический виджет, который связывается с бэкендом и показывает только самые свежие монеты, недавно появившиеся на рынке.
-- **Таблица рынков**:
-  - Подгрузка более 350+ реальных пар напрямую с Binance.
-  - Кастомные фильтры категорий: `Meme`, `AI`, `DeFi`, `Layer 1/2`.
-  - Встроенный поиск монет.
-  - Sparklines (мини-графики) для каждой монеты на основе изменения цены.
-  - Имитация колонки Market Cap.
+  - *New Listings*: A dynamic widget connected to the backend that showcases the newest coins recently added to the market.
+- **Markets Table**:
+  - Loads 350+ real trading pairs directly from Binance.
+  - Custom category filters: `Meme`, `AI`, `DeFi`, `Layer 1/2`.
+  - Built-in search functionality for quick coin lookup.
+  - Sparklines (miniature charts) for each coin, visually representing price changes.
+  - Simulated Market Cap column.
 
-### Торговый терминал (Spot)
-- **Интеграция TradingView**: Профессиональный интерактивный график цены (Candlesticks). Мы убрали лишние атрибуты (например, логотип Bitstamp), чтобы график выглядел нативно.
-- **Живой Orderbook (Стакан цен)**: В реальном времени (по WebSockets) показывает заявки на покупку и продажу (Asks / Bids).
-- **Живая лента сделок (Market Trades)**: Мгновенное отображение рыночных покупок и продаж.
-- **Умный выбор торговой пары**: 
-  - Боковая панель и модальное окно для поиска пары по базовой или квотируемой валюте (USDT, USDC, BTC и др.).
-  - Значок **"🆕 NEW"** автоматически появляется рядом со свежими листингами!
-- **Торговая панель (Order Form)**:
-  - Типы ордеров: `Limit`, `Market`, `Stop Limit`.
-  - Интерактивный ползунок % для выбора суммы от депозита.
-  - Динамический пересчет `Total USDT` при изменении цены или количества.
-- **Панель истории**: Вкладки *Open Orders* и *Order History*, подключенные к REST API бэкенда.
-- **Только рыночные ордера**: Для максимальной простоты интерфейса мы удалили создание лимитных ордеров, оставив только мгновенные сделки по рынку.
+### Trading Terminal (Spot)
+- **TradingView Integration**: A professional, interactive price chart (Candlesticks). We have removed unnecessary UI elements (like the Bitstamp logo) to make the chart feel completely native.
+- **Live Orderbook**: Real-time display of Buy and Sell orders (Bids/Asks) updated continuously via WebSockets.
+- **Live Market Trades**: Instantaneous feed of market buys and sells.
+- **Smart Pair Selection**:
+  - A side panel and modal for finding pairs by base or quote currency (USDT, USDC, BTC, etc.).
+  - A **" NEW"** badge automatically appears next to recent listings!
+- **Order Form**:
+  - Supported order types: `Limit`, `Market`, `Stop Limit`.
+  - Interactive % slider to quickly allocate a portion of the available deposit.
+  - Dynamic `Total USDT` recalculation upon price or quantity changes.
+- **History Panel**: Includes *Open Orders* and *Order History* tabs, fully connected to the backend REST API.
+- **Market Orders Focus**: For maximum UI simplicity, limit order creation has been visually streamlined to prioritize instant market execution in the current iteration.
 
-### Деривативы (Futures)
-- **Отдельный торговый интерфейс**: Продвинутая панель для торговли фьючерсными контрактами, поддерживающая только пары с USDT и USDC в качестве квотируемой валюты.
-- **Маржинальная торговля**:
-  - Настройка плеча (Leverage) от 1x до 100x с динамическим пересчетом требуемой маржи.
-  - Поддержка изолированной (Isolated) и кросс (Cross) маржи.
-- **Управление позициями**:
-  - Вкладка **Positions** в реальном времени отображает размер позиции, цену входа, нереализованный PnL и примерную цену ликвидации.
-  - Позиции обеспечены механизмом изоляции рисков на уровне ядра.
+### Derivatives (Futures)
+- **Dedicated Trading Interface**: An advanced panel tailored for trading futures contracts, supporting only pairs with USDT and USDC as quote currencies.
+- **Margin Trading**:
+  - Adjustable Leverage from 1x to 100x with dynamic calculation of the required margin.
+  - Support for both Isolated and Cross margin modes.
+- **Positions Management**:
+  - The **Positions** tab provides real-time updates on position size, entry price, unrealized PnL, and estimated liquidation price.
+  - Position risks are isolated and handled efficiently by the core engine.
 
-### 💼 Wallet / Portfolio Dashboard
-Совершенно новая страница кошелька (доступна по ссылке **Wallet** в главном меню или по адресу `/wallet`), которая агрегирует все активы пользователя в красивый дашборд.
-- **Estimated Balance**: Динамический расчет общей стоимости портфеля в долларах (USD) на основе актуальных цен с Binance в реальном времени.
-- **Интерактивная диаграмма (Pie Chart)**: Визуальное распределение активов с легендой и подсчетом процентов.
-- **Таблица активов**: Подробный список монет с колонками `Total`, `Available`, `In Order` и `Value (USD)`. Для каждой монеты подтягивается её оригинальный логотип.
-- **Кнопки действий**: Отсюда можно быстро перейти к торговле любой монетой.
+###  Wallet / Portfolio Dashboard
+A completely redesigned wallet page (accessible via the **Wallet** link in the main menu or at `/wallet`) that aggregates all user assets into an elegant dashboard.
+- **Estimated Balance**: Dynamic calculation of the total portfolio value in USD based on real-time Binance prices.
+- **Interactive Pie Chart**: Visual distribution of assets with a detailed legend and percentage breakdown.
+- **Assets Table**: A comprehensive list of held coins featuring columns for `Total`, `Available`, `In Order`, and `Value (USD)`. Original logos are automatically fetched for each asset.
+- **Quick Actions**: One-click transition to the trading terminal for any specific coin.
 
 ---
 
-## ⚙️ 2. Серверная часть (Бэкенд на Golang)
+## 2. Backend (Golang)
 
-Бэкенд написан полностью с нуля и выполняет роль связующего звена (Proxy) между нашим UI и ядром Binance, а также содержит собственную бизнес-логику.
+The backend is built from scratch and acts as a high-performance proxy between our UI and the Binance core, while also containing custom business logic.
 
 ### REST API
-- **Управление ордерами и балансом**: Настроены эндпоинты `/api/v1/order`, `/api/v1/balance` и `/api/v1/orders` для симуляции отправки ордеров и получения фейкового баланса пользователя.
-- **Кеширующий Прокси для Иконок (`/api/v1/icon`)**: 
-  - Binance блокирует загрузку изображений по CORS. Наш бэкенд обходит это: он сам скачивает оригинальные цветные иконки из закрытого API Binance и отдает фронтенду.
-  - Внедрено кеширование картинок в оперативной памяти (RAM) для моментальной загрузки.
+- **Order and Balance Management**: Endpoints such as `/api/v1/order`, `/api/v1/balance`, and `/api/v1/orders` simulate order execution and retrieve the user's virtual balance.
+- **Caching Proxy for Icons (`/api/v1/icon`)**:
+  - Binance blocks direct image loading due to CORS policies. Our backend bypasses this by securely fetching the original colored icons from Binance's private API and serving them to the frontend.
+  - Implements RAM-based caching for instantaneous image loading.
 
-### Система авто-поиска листингов (Background Scanner)
-- Сервер имеет встроенный фоновый демон, который опрашивает рынки каждый час.
-- Локальная база данных хранится в папке `data/` в форматах JSON (`known_symbols.json` и `new_listings.json`).
-- Как только сканер замечает новую торговую пару, он сохраняет её и выдает по API `/api/v1/new-listings`. Это позволяет фронтенду мгновенно вешать теги **NEW** без вмешательства программистов.
+### Automated Listings Scanner (Background Scanner)
+- The server includes a built-in background daemon that polls the markets every hour.
+- A local database is maintained in the `data/` directory using JSON formats (`known_symbols.json` and `new_listings.json`).
+- Whenever the scanner detects a new trading pair, it records it and exposes it via the `/api/v1/new-listings` endpoint. This allows the frontend to automatically attach the **NEW** badge without any manual intervention from developers.
 
 ### WebSockets Hub
-- Чтобы графики и стакан не тормозили браузер запросами каждую секунду, бэкенд поднимает коннект `wss://stream.binance.com:9443` к Binance.
-- Наш `wsHub` читает сырые потоки, парсит их и широковещательно отправляет (broadcast) всем подключенным клиентам (вкладкам браузера) в чистом JSON.
+- To prevent browser lag caused by continuous polling, the backend maintains a persistent connection to `wss://stream.binance.com:9443` (Binance WSS).
+- Our internal `wsHub` reads the raw streams, parses the data, and broadcasts clean JSON payloads to all connected clients (browser tabs) efficiently.
 
 ---
 
-## 🛠 3. Архитектура файлов
-В проекте используется модульная структура Go. Все компоненты разложены по полочкам:
-- `cmd/`, `internal/api/`, `internal/ui/` (с подпапками для скриптов и стилей)
-- Вместо раздутых HTML файлов, весь фронтенд генерируется и склеивается внутри Go-кода, что делает развертывание приложения (деплой) моментальным — всё собирается в один бинарный файл `dex.exe`!
+## 3. Project Architecture
+The project utilizes a standard Go modular structure, ensuring all components are cleanly separated:
+- Directories: `cmd/`, `internal/api/`, `internal/ui/` (with subdirectories for scripts and styles).
+- Instead of using bloated, separate HTML files, the entire frontend is generated and bundled within the Go code. This makes deployment instantaneous—everything is compiled into a single executable binary (`dex.exe`)!
 
 > [!NOTE]
-> Проект представляет собой крепкий фундамент. На этой базе можно легко реализовать подключение к Web3-кошелькам (MetaMask) или настоящему торговому API Binance по API-ключам для реальной торговли.
+> This project serves as a robust foundation. From this base, it is easy to implement Web3 wallet connections (like MetaMask) or integrate real Binance API keys for live, real-world trading.
 
 ---
 
