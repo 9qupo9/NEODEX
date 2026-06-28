@@ -2,6 +2,8 @@
 
 **NEODEX** is a comprehensive cryptocurrency exchange simulation (DEX / CEX interface) featuring a professional trading terminal, live market data, and an advanced architecture. The project is built with a **Golang** backend and uses pure **HTML/CSS/JS** for the frontend, entirely avoiding heavy frameworks.
 
+![NEODEX Trading Terminal](assets/terminal.png)
+
 This document provides a complete description of all implemented features.
 
 ---
@@ -53,6 +55,9 @@ A completely redesigned wallet page (accessible via the **Wallet** link in the m
 - **Quick Actions**: One-click transition to the trading terminal for any specific coin.
 
 ### Admin Panel (System Control)
+
+![NEODEX Admin Panel](assets/admin.png)
+
 A dedicated, highly secure dashboard (`/admin`) for platform administrators to monitor and control the exchange in real-time:
 - **Live Core Metrics**: Visualizes active WS/TCP connections, 24h trading volume, total revenue, and real-time engine latency (without any mock data).
 - **Matching Engine Control**: "Start Trading" and "Stop Trading" buttons directly interface with the Golang routing core. Stopping trading atomically rejects all new incoming orders across all active markets.
