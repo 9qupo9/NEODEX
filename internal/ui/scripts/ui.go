@@ -372,12 +372,10 @@ function updateUI() {
             priceInput.disabled = false;
             priceInput.placeholder = '0.00';
         }
-    } else if (currentType === 'STOP_LIMIT') {
-        if(stopInputGroup) stopInputGroup.style.display = 'flex';
-        if(priceInput) {
-            priceInput.disabled = false;
-            priceInput.placeholder = '0.00';
-        }
+    } else if (currentType === 'STOP_LIMIT' || currentType === 'TAKE_PROFIT') {
+        priceInput.disabled = false;
+        priceInputGroup.style.display = 'flex';
+        stopInputGroup.style.display = 'flex';
     }
     
     calculateTotal();

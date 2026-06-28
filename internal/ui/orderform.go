@@ -5,6 +5,9 @@ func RenderOrderForm() string {
 	<div class="order-form-panel">
 		<div class="order-tabs" id="orderTypeTabs">
 			<div class="tab active" data-type="MARKET">Market</div>
+			<div class="tab" data-type="LIMIT">Limit</div>
+			<div class="tab" data-type="STOP_LIMIT">Stop Limit</div>
+			<div class="tab" data-type="TAKE_PROFIT">Take Profit</div>
 		</div>
 
 		<!-- Quote Currency Tabs (like Binance) -->
@@ -29,7 +32,7 @@ func RenderOrderForm() string {
 			</div>
 			
 			<div class="input-group" id="stopInputGroup" style="display: none;">
-				<span class="input-label">Stop</span>
+				<span class="input-label">Trigger</span>
 				<input type="number" id="stopInput" placeholder="0.00">
 				<span class="input-suffix" id="stopSuffix">USDT</span>
 			</div>

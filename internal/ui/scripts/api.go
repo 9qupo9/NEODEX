@@ -100,8 +100,8 @@ async function submitOrder() {
         alert("Enter a valid amount");
         return;
     }
-    if (currentType === 'STOP_LIMIT' && (isNaN(stop) || stop <= 0)) {
-        alert("Enter a valid stop price");
+    if ((currentType === 'STOP_LIMIT' || currentType === 'TAKE_PROFIT') && (isNaN(stop) || stop <= 0)) {
+        alert("Enter a valid trigger price");
         return;
     }
 
@@ -112,6 +112,7 @@ async function submitOrder() {
         side: currentSide,
         type: currentType,
         price: (currentType === 'MARKET' ? 0 : p).toString(),
+        triggerPrice: ((currentType === 'STOP_LIMIT' || currentType === 'TAKE_PROFIT') ? stop : 0).toString(),
         qty: q.toString(),
         timestamp: Date.now()
     };
@@ -137,6 +138,7 @@ async function submitOrder() {
                 { name: "side", type: "string" },
                 { name: "type", type: "string" },
                 { name: "price", type: "string" },
+                { name: "triggerPrice", type: "string" },
                 { name: "qty", type: "string" },
                 { name: "timestamp", type: "uint256" }
             ]

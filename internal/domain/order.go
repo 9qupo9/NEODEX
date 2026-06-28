@@ -20,7 +20,13 @@ const (
 
 	Limit  OrderType = "LIMIT"
 	Market OrderType = "MARKET"
-	// TODO: Добавить типы StopLimit, TakeProfit, TrailingStop (как на MEXC).
+	StopLimit  OrderType = "STOP_LIMIT"
+	TakeProfit OrderType = "TAKE_PROFIT"
+
+	// TimeInForce определяет как долго ордер будет активен
+	GTC string = "GTC" // Good Til Cancelled
+	IOC string = "IOC" // Immediate Or Cancel
+	FOK string = "FOK" // Fill Or Kill
 
 	StatusNew             OrderStatus = "NEW"              // Ордер только что создан и добавлен в стакан
 	StatusPartiallyFilled OrderStatus = "PARTIALLY_FILLED" // Ордер исполнен частично
@@ -30,14 +36,15 @@ const (
 )
 
 // Order представляет намерение пользователя купить или продать определенный актив.
-// TODO: Добавить TimeInForce (GTC - Good-Til-Cancelled, IOC - Immediate-Or-Cancel, FOK - Fill-Or-Kill).
 type Order struct {
 	ID           string          // Уникальный идентификатор ордера (генерируется pkg/id)
 	AccountID    string          // ID пользователя, который выставил ордер
 	Pair         Pair            // Торговая пара (например, BTC/USDT)
 	Side         Side            // BUY или SELL
-	Type         OrderType       // LIMIT или MARKET
+	Type         OrderType       // LIMIT, MARKET, STOP_LIMIT, TAKE_PROFIT
+	TimeInForce  string          // GTC, IOC, FOK
 	Price        decimal.Decimal // Цена исполнения. Для MARKET ордеров будет 0
+	TriggerPrice decimal.Decimal // Триггерная цена для StopLimit и TakeProfit
 	Qty          decimal.Decimal // Первоначально запрошенное количество (объем)
 	FilledQty    decimal.Decimal // Количество, которое уже было исполнено
 	Status       OrderStatus     // Текущий статус
@@ -63,18 +70,22 @@ func (o *Order) IsFilled() bool {
 }
 
 // NewOrder — конструктор для создания нового экземпляра ордера.
-// Инициализирует ордер со статусом NEW, нулевым заполненным объемом и текущим временем.
-func NewOrder(id, accountID string, pair Pair, side Side, oType OrderType, price, qty decimal.Decimal) *Order {
+func NewOrder(id, accountID string, pair Pair, side Side, oType OrderType, price, qty decimal.Decimal, triggerPrice decimal.Decimal, timeInForce string) *Order {
+	if timeInForce == "" {
+		timeInForce = GTC
+	}
 	return &Order{
-		ID:        id,
-		AccountID: accountID,
-		Pair:      pair,
-		Side:      side,
-		Type:      oType,
-		Price:     price,
-		Qty:       qty,
-		FilledQty: decimal.Zero(),
-		Status:    StatusNew,
-		CreatedAt: time.Now().UnixNano(),
+		ID:           id,
+		AccountID:    accountID,
+		Pair:         pair,
+		Side:         side,
+		Type:         oType,
+		TimeInForce:  timeInForce,
+		Price:        price,
+		TriggerPrice: triggerPrice,
+		Qty:          qty,
+		FilledQty:    decimal.Zero(),
+		Status:       StatusNew,
+		CreatedAt:    time.Now().UnixNano(),
 	}
 }

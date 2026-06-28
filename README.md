@@ -52,6 +52,13 @@ A completely redesigned wallet page (accessible via the **Wallet** link in the m
 - **Assets Table**: A comprehensive list of held coins featuring columns for `Total`, `Available`, `In Order`, and `Value (USD)`. Original logos are automatically fetched for each asset.
 - **Quick Actions**: One-click transition to the trading terminal for any specific coin.
 
+### Admin Panel (System Control)
+A dedicated, highly secure dashboard (`/admin`) for platform administrators to monitor and control the exchange in real-time:
+- **Live Core Metrics**: Visualizes active WS/TCP connections, 24h trading volume, total revenue, and real-time engine latency (without any mock data).
+- **Matching Engine Control**: "Start Trading" and "Stop Trading" buttons directly interface with the Golang routing core. Stopping trading atomically rejects all new incoming orders across all active markets.
+- **User Management**: A clean table displaying all registered users, their balances, and the ability to instantly lock/unlock specific accounts from trading.
+- **System Commands**: Allows administrators to clear system logs or manually trigger an **AOF Snapshot**, saving the entire in-memory state of the exchange to a persistent `snapshots/` folder.
+
 ---
 
 ## 2. Backend (Golang)

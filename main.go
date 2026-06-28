@@ -14,11 +14,16 @@ import (
 	"dex/internal/engine"
 	"dex/internal/storage"
 	"dex/pkg/decimal"
+	"dex/pkg/syslog"
 )
 
 // main — главная точка входа, где "собирается" вся архитектура (Dependency Injection).
 func main() {
-	log.Println("Запуск DEX Ноды...")
+	// Перехватываем стандартный логгер для вывода в админ-панель
+	log.SetOutput(syslog.GlobalBuffer)
+	log.SetFlags(0) // Убираем стандартные префиксы времени (будем добавлять свои или парсить)
+
+	log.Println("[SYSTEM] Запуск DEX Ноды...")
 
 	// 1. Загрузка конфигурации
 	cfg, _ := config.LoadConfig("config.json")
@@ -29,7 +34,13 @@ func main() {
 		log.Fatalf("Ошибка загрузки хранилища: %v", err)
 	}
 
-	// 3. Создаем торговую пару с правилами (Tick Size, Lot Size)
+	// 4. Создаем канал Broadcaster для рассылки рыночных данных по WebSocket
+	fromEngine := make(chan []byte, 1024)
+
+	// 5. Инициализация Маршрутизатора
+	router := engine.NewEngineRouter(store, fromEngine)
+
+	// 6. Создаем торговую пару с правилами (Tick Size, Lot Size)
 	pair := domain.Pair{
 		BaseAsset:  "BTC",
 		QuoteAsset: "USDT",
@@ -37,15 +48,11 @@ func main() {
 		QtyStep:    decimal.MustParse("0.0001"),
 	}
 
-	// 4. Инициализация Торговых Ядер и Маршрутизатора
-	router := engine.NewEngineRouter()
+	router.CreateEngine(pair) // Создаем и регистрируем BTC/USDT
 
-	// Добавляем Broadcaster для рассылки рыночных данных по WebSocket
-	fromEngine := make(chan []byte, 1024)
-	eng := engine.NewEngine(pair, store, fromEngine)
+	// Для фьючерсов оставим жесткую инициализацию (или тоже можно через роутер в будущем)
 	futuresEng := engine.NewFuturesEngine(pair, store, fromEngine)
-	
-	router.RegisterEngine(eng) // Регистрация BTC_USDT в роутере
+
 
 	// Можно добавить еще пару для тестов, например ETH/USDT
 	ethPair := domain.Pair{
@@ -54,17 +61,8 @@ func main() {
 		PriceStep:  decimal.MustParse("0.01"),
 		QtyStep:    decimal.MustParse("0.0001"),
 	}
-	ethEng := engine.NewEngine(ethPair, store, fromEngine)
-	router.RegisterEngine(ethEng)
+	router.CreateEngine(ethPair)
 
-	// -- МОК ДАННЫХ ДЛЯ ТЕСТИРОВАНИЯ --
-	// Печатаем немного тестовых денег пользователю, чтобы он мог отправить ордер
-	acc, _ := store.CreateAccount("test_user_1")
-	acc.Deposit("USDT", decimal.MustParse("100000"))
-	acc.Deposit("BTC", decimal.MustParse("10"))
-	acc.Deposit("ETH", decimal.MustParse("50"))
-	
-	// ----------------------------------
 
 	// 5. Инициализация WebSocket Хаба (Шардированный для масштабирования)
 	wsHub := ws.NewShardedHub(256) // 256 шардов для максимальной утилизации CPU
@@ -86,8 +84,8 @@ func main() {
 		}
 	}()
 
-	// 7. Инициализация HTTP REST сервера (передаем и ядро, и WS хаб)
-	httpHandlers := http.NewHandlers(router, futuresEng, store)
+	// 7. Инициализация HTTP REST сервера (передаем и ядро, и WS хаб, и tcpHandler для метрик)
+	httpHandlers := http.NewHandlers(router, futuresEng, store, tcpHandler, wsHub)
 	httpServer := http.NewServer(cfg.HttpAddr, httpHandlers, wsHub)
 	go func() {
 		if err := httpServer.Start(); err != nil {

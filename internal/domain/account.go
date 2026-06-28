@@ -22,6 +22,9 @@ type Account struct {
 	
 	// Locked хранит замороженные средства (те, что сейчас находятся в ордерах).
 	Locked map[string]decimal.Decimal
+	
+	// IsBlocked указывает, заблокирован ли пользователь (не может торговать)
+	IsBlocked bool
 }
 
 // NewAccount инициализирует новый кошелек пользователя с пустыми балансами.
@@ -139,4 +142,22 @@ func (a *Account) GetBalance(asset string) decimal.Decimal {
 		return b.Copy()
 	}
 	return decimal.Zero()
+}
+
+// GetBalances возвращает копию всех доступных балансов аккаунта.
+func (a *Account) GetBalances() map[string]decimal.Decimal {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+	bals := make(map[string]decimal.Decimal)
+	for k, v := range a.Balances {
+		bals[k] = v.Copy()
+	}
+	return bals
+}
+
+// SetBlocked блокирует или разблокирует аккаунт.
+func (a *Account) SetBlocked(status bool) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.IsBlocked = status
 }

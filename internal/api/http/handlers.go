@@ -1,14 +1,18 @@
 package http
 
 import (
+	"dex/internal/api/tcp"
+	"dex/internal/api/ws"
 	"dex/internal/domain"
 	"dex/internal/engine"
 	"dex/internal/storage"
 	"dex/pkg/decimal"
 	"dex/pkg/id"
+	"dex/pkg/syslog"
 	"encoding/json"
 	"net/http"
 	"strings"
+	"sync/atomic"
 )
 
 // Handlers объединяет все методы для HTTP REST API.
@@ -16,22 +20,81 @@ type Handlers struct {
 	Router        *engine.EngineRouter  // Маршрутизатор спотовых движков
 	FuturesEngine *engine.FuturesEngine // Ссылка на фьючерсное ядро (пока одно для тестов)
 	Store         storage.Store
+	TCPHandler    *tcp.Handler   // Ссылка на TCP обработчик для метрик
+	WSHub         *ws.ShardedHub // Ссылка на WS хаб для метрик
 }
 
 // NewHandlers создает экземпляр обработчиков.
-func NewHandlers(r *engine.EngineRouter, f *engine.FuturesEngine, store storage.Store) *Handlers {
-	return &Handlers{Router: r, FuturesEngine: f, Store: store}
+func NewHandlers(r *engine.EngineRouter, f *engine.FuturesEngine, store storage.Store, th *tcp.Handler, wh *ws.ShardedHub) *Handlers {
+	return &Handlers{Router: r, FuturesEngine: f, Store: store, TCPHandler: th, WSHub: wh}
+}
+
+// HandleAdminMetrics возвращает JSON с системными метриками для админки.
+func (h *Handlers) HandleAdminMetrics(w http.ResponseWriter, r *http.Request) {
+	users, vol, rev := h.Store.GetSystemMetrics()
+	tcpBots := atomic.LoadInt32(&h.TCPHandler.ActiveConnections)
+	latency := h.Router.GetLastLatencyMs()
+	activeOrders := h.Router.GetTotalActiveOrders()
+	wsClients := h.WSHub.GetTotalClients()
+	logs := syslog.GlobalBuffer.GetLogs()
+	isHalted := h.Router.IsHalted()
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"users":         users,
+		"volume":        vol,
+		"revenue":       rev,
+		"tcp_bots":      tcpBots,
+		"ws_clients":    wsClients,
+		"active_orders": activeOrders,
+		"latency_ms":    latency,
+		"is_halted":     isHalted,
+		"logs":          logs,
+	})
+}
+
+// HandleAdminAction обрабатывает команды из админ-панели (снапшот, очистка кэша, остановка торгов).
+func (h *Handlers) HandleAdminAction(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Action string `json:"action"`
+		Halt   bool   `json:"halt"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
+	}
+
+	switch req.Action {
+	case "snapshot":
+		if err := h.Store.Snapshot(); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	case "clear_cache":
+		syslog.GlobalBuffer.Clear()
+	case "toggle_trading":
+		h.Router.SetHalted(req.Halt)
+	default:
+		http.Error(w, "unknown action", http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 }
 
 // OrderRequest — структура входящего JSON для создания ордера.
 type OrderRequest struct {
-	AccountID string `json:"accountId"` // Кто выставляет
-	Base      string `json:"base"`      // Базовый актив
-	Quote     string `json:"quote"`     // Котируемый актив
-	Side      string `json:"side"`      // BUY или SELL
-	Type      string `json:"type"`      // LIMIT или MARKET
-	Price     string `json:"price"`     // Цена за 1 лот
-	Qty       string `json:"qty"`       // Общее количество
+	AccountID    string `json:"accountId"`    // Кто выставляет
+	Base         string `json:"base"`         // Базовый актив
+	Quote        string `json:"quote"`        // Котируемый актив
+	Side         string `json:"side"`         // BUY или SELL
+	Type         string `json:"type"`         // LIMIT, MARKET, STOP_LIMIT, TAKE_PROFIT
+	TimeInForce  string `json:"timeInForce"`  // GTC, IOC, FOK
+	Price        string `json:"price"`        // Цена за 1 лот
+	TriggerPrice string `json:"triggerPrice"` // Триггер для стоп-ордеров
+	Qty          string `json:"qty"`          // Общее количество
+	Signature    string `json:"signature"`    // Web3 подпись (EIP-712)
 }
 
 // HandlePlaceOrder (POST /api/v1/order) обрабатывает запрос на создание ордера.
@@ -50,9 +113,10 @@ func (h *Handlers) HandlePlaceOrder(w http.ResponseWriter, r *http.Request) {
 
 	price, _ := decimal.NewFromString(req.Price)
 	qty, _ := decimal.NewFromString(req.Qty)
+	triggerPrice, _ := decimal.NewFromString(req.TriggerPrice)
 
 	pair := domain.Pair{BaseAsset: req.Base, QuoteAsset: req.Quote}
-	order := domain.NewOrder(id.New(), req.AccountID, pair, domain.Side(req.Side), domain.OrderType(req.Type), price, qty)
+	order := domain.NewOrder(id.New(), req.AccountID, pair, domain.Side(req.Side), domain.OrderType(req.Type), price, qty, triggerPrice, req.TimeInForce)
 
 	// Передаем ордер в маршрутизатор движков (EngineRouter)
 	trades, err := h.Router.PlaceOrder(order)
@@ -80,7 +144,7 @@ func (h *Handlers) HandleGetOrderbook(w http.ResponseWriter, r *http.Request) {
 	if symbol == "" {
 		symbol = "BTC_USDT" // Default for backward compatibility
 	}
-	
+
 	parts := strings.Split(symbol, "_")
 	if len(parts) != 2 {
 		http.Error(w, "invalid symbol format, expected BASE_QUOTE", http.StatusBadRequest)
@@ -169,4 +233,38 @@ func (h *Handlers) HandleCancelOrder(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"status": "canceled"})
+}
+
+// HandleAdminUsers возвращает список всех пользователей системы.
+func (h *Handlers) HandleAdminUsers(w http.ResponseWriter, r *http.Request) {
+	accounts, err := h.Store.GetAllAccounts()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(accounts)
+}
+
+// HandleAdminBlockUser блокирует или разблокирует пользователя.
+func (h *Handlers) HandleAdminBlockUser(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var req struct {
+		Address string `json:"address"`
+		Block   bool   `json:"block"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	acc, err := h.Store.GetAccount(req.Address)
+	if err != nil {
+		http.Error(w, "Account not found", http.StatusNotFound)
+		return
+	}
+	acc.SetBlocked(req.Block)
+	w.WriteHeader(http.StatusOK)
 }

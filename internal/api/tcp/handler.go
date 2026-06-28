@@ -7,11 +7,13 @@ import (
 	"encoding/binary"
 	"log"
 	"net"
+	"sync/atomic"
 )
 
 // Handler отвечает за бизнес-логику обработки входящих TCP соединений.
 type Handler struct {
 	Router *engine.EngineRouter
+	ActiveConnections int32
 }
 
 // NewHandler создает новый обработчик TCP.
@@ -22,8 +24,11 @@ func NewHandler(r *engine.EngineRouter) *Handler {
 // HandleConnection вызывается для каждого нового подключившегося TCP-клиента (например, HFT-бота).
 // Работает в отдельной горутине для каждого клиента.
 func (h *Handler) HandleConnection(conn net.Conn) {
+	atomic.AddInt32(&h.ActiveConnections, 1)
+	defer atomic.AddInt32(&h.ActiveConnections, -1)
+	
 	defer conn.Close()
-	log.Printf("TCP Клиент подключился: %s", conn.RemoteAddr())
+	log.Printf("[TCP] Клиент подключился: %s", conn.RemoteAddr())
 
 	// Бесконечный цикл чтения (Event Loop клиента)
 	for {
@@ -101,7 +106,9 @@ func (h *Handler) HandleConnection(conn net.Conn) {
 			qtyDec := decimal.NewFromInt(int64(qtyRaw)).Div(decimal.NewFromInt(100000000))
 
 			pair := domain.Pair{BaseAsset: base, QuoteAsset: quote}
-			order := domain.NewOrder("tcp-"+accountID[:4], accountID, pair, side, orderType, priceDec, qtyDec)
+			// TODO: В будущем необходимо расширить бинарный протокол (Payload > 66 байт), чтобы получать TimeInForce и TriggerPrice для HFT.
+			// Принцип SOLID: Open/Closed Principle. Текущая структура закрыта для изменений, но должна быть открыта для расширения через версионирование TCP сообщений.
+			order := domain.NewOrder("tcp-"+accountID[:4], accountID, pair, side, orderType, priceDec, qtyDec, decimal.Zero(), "")
 
 			// Передаем в роутер
 			trades, err := h.Router.PlaceOrder(order)

@@ -89,6 +89,45 @@ func RenderWalletPage() string {
 							</table>
 						</div>
 					</div>
+					
+					<!-- Staking / Earn Section -->
+					<div class="wallet-card assets-card" style="margin-top: 20px;">
+						<div class="assets-header">
+							<h3>DeFi Earn (Staking)</h3>
+						</div>
+						
+						<div class="table-container">
+							<table class="assets-table">
+								<thead>
+									<tr>
+										<th>Asset</th>
+										<th class="right-align">Amount Staked</th>
+										<th class="right-align hide-mobile">Est. APY</th>
+										<th class="right-align hide-mobile">Current Reward</th>
+										<th class="right-align">Action</th>
+									</tr>
+								</thead>
+								<tbody id="stakingTableBody">
+									<tr><td colspan="5" style="text-align: center; padding: 40px;">No active stakes</td></tr>
+								</tbody>
+							</table>
+						</div>
+						
+						<div class="stake-action-box" style="padding: 15px; border-top: 1px solid var(--border-color); display: flex; gap: 10px; align-items: center; margin-top: 10px;">
+							<select id="stakeAssetSelect" class="btn" style="background: var(--bg-hover); color: var(--text-main); border: 1px solid var(--border-color);">
+								<option value="USDT">USDT (10% APY)</option>
+								<option value="BTC">BTC (5% APY)</option>
+								<option value="ETH">ETH (5% APY)</option>
+							</select>
+							<input type="number" id="stakeAmountInput" placeholder="Amount" style="background: var(--bg-hover); border: 1px solid var(--border-color); color: var(--text-main); padding: 8px; border-radius: 4px; width: 120px;">
+							<select id="stakeDaysSelect" class="btn" style="background: var(--bg-hover); color: var(--text-main); border: 1px solid var(--border-color);">
+								<option value="30">30 Days</option>
+								<option value="90">90 Days</option>
+								<option value="365">1 Year</option>
+							</select>
+							<button class="btn btn-main btn-buy" onclick="stakeFunds()">Stake Now</button>
+						</div>
+					</div>
 				</div>
 
 			</div>

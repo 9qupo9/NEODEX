@@ -48,7 +48,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     const savedWallet = localStorage.getItem('neodex_wallet_connected');
     if (savedWallet === 'true' && typeof window.ethereum !== 'undefined') {
         try {
-            // Тихо проверяем доступные аккаунты без вызова модалки
             const accounts = await window.ethereum.request({ method: 'eth_accounts' });
             if (accounts && accounts.length > 0) {
                 walletAddress = accounts[0];
@@ -71,29 +70,53 @@ async function connectWallet() {
     }
     
     if (isWalletConnected) {
+        // Отключение
         isWalletConnected = false;
         walletAddress = "";
         localStorage.removeItem('neodex_wallet_connected');
+        // TODO: Возможно сделать запрос на logout / удаление куки сессии
         updateWalletUI();
         return;
     }
     
     try {
-        // Заставляем MetaMask всегда спрашивать подтверждение и выбор аккаунта
-        await window.ethereum.request({
-            method: 'wallet_requestPermissions',
-            params: [{ eth_accounts: {} }]
-        });
-        
+        // 1. Запрашиваем аккаунты
         const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-        if (accounts && accounts.length > 0) {
-            walletAddress = accounts[0];
-            isWalletConnected = true;
-            localStorage.setItem('neodex_wallet_connected', 'true');
-            updateWalletUI();
-        }
+        if (!accounts || accounts.length === 0) return;
+        const address = accounts[0];
+
+        // 2. Получаем Nonce с бэкенда
+        const nonceRes = await fetch('/api/v1/auth/nonce?address=' + address);
+        if (!nonceRes.ok) throw new Error("Не удалось получить nonce");
+        const nonceData = await nonceRes.json();
+        const nonce = nonceData.nonce;
+
+        // 3. Подписываем сообщение
+        const message = "NEODEX Auth. Подпишите это сообщение для входа.\nNonce: " + nonce;
+        // Для personal_sign формат передачи параметров: [message(hex), address]
+        const msgHex = '0x' + [...message].map(c => c.charCodeAt(0).toString(16)).join('');
+        const signature = await window.ethereum.request({
+            method: 'personal_sign',
+            params: [msgHex, address]
+        });
+
+        // 4. Отправляем подпись на бэкенд
+        const verifyRes = await fetch('/api/v1/auth/verify', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({address: address, signature: signature})
+        });
+
+        if (!verifyRes.ok) throw new Error("Ошибка верификации");
+
+        walletAddress = address;
+        isWalletConnected = true;
+        localStorage.setItem('neodex_wallet_connected', 'true');
+        updateWalletUI();
+
     } catch (e) {
         console.error('Ошибка подключения кошелька:', e);
+        alert('Ошибка при подключении кошелька: ' + e.message);
     }
 }
 `

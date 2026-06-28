@@ -2,6 +2,7 @@ package storage
 
 import (
 	"dex/internal/domain"
+	"dex/pkg/decimal"
 	"sync"
 )
 
@@ -35,6 +36,18 @@ func (s *MemoryStore) GetAccount(address string) (*domain.Account, error) {
 		return acc, nil
 	}
 	return nil, ErrAccountNotFound
+}
+
+// GetAllAccounts возвращает список всех аккаунтов.
+func (s *MemoryStore) GetAllAccounts() ([]*domain.Account, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	
+	var all []*domain.Account
+	for _, acc := range s.accounts {
+		all = append(all, acc)
+	}
+	return all, nil
 }
 
 // CreateAccount безопасно создает аккаунт, если он еще не существует.
@@ -146,4 +159,48 @@ func (s *MemoryStore) SettleTradeBalances(trade *domain.Trade) error {
 	return nil
 }
 
+// GetSystemMetrics возвращает метрики платформы.
+func (s *MemoryStore) GetSystemMetrics() (int, string, string) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
+	users := len(s.accounts)
+	
+	vol := decimal.Zero()
+	for _, t := range s.trades {
+		vol = vol.Add(t.Qty.Mul(t.Price))
+	}
+
+	// Упрощенный расчет выручки биржи: 0.1% (0.001) от оборота
+	revenue := vol.Mul(decimal.MustParse("0.001"))
+
+	return users, vol.String(), revenue.String()
+}
+
+// DumpState возвращает копии всех аккаунтов, активных ордеров и позиций для создания снапшота.
+func (s *MemoryStore) DumpState() ([]*domain.Account, []*domain.Order, []*domain.Position) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	accounts := make([]*domain.Account, 0, len(s.accounts))
+	for _, acc := range s.accounts {
+		accounts = append(accounts, acc)
+	}
+
+	orders := make([]*domain.Order, 0, len(s.orders))
+	for _, ord := range s.orders {
+		orders = append(orders, ord)
+	}
+
+	positions := make([]*domain.Position, 0, len(s.positions))
+	for _, pos := range s.positions {
+		positions = append(positions, pos)
+	}
+
+	return accounts, orders, positions
+}
+
+// Snapshot в in-memory хранилище ничего не делает (некуда сохранять).
+func (s *MemoryStore) Snapshot() error {
+	return nil
+}

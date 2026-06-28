@@ -19,6 +19,9 @@ type Store interface {
 	// GetAccount возвращает аккаунт по его адресу. Вернет ошибку, если аккаунт не существует.
 	GetAccount(address string) (*domain.Account, error)
 	
+	// GetAllAccounts возвращает список всех аккаунтов.
+	GetAllAccounts() ([]*domain.Account, error)
+	
 	// CreateAccount создает новый пустой аккаунт в хранилище.
 	CreateAccount(address string) (*domain.Account, error)
 	
@@ -51,4 +54,10 @@ type Store interface {
 	GetPositionsByAccount(address string) ([]*domain.Position, error)
 	GetPosition(id string) (*domain.Position, error)
 	SavePosition(position *domain.Position) error
+
+	// Metrics (Админ-панель)
+	GetSystemMetrics() (usersCount int, totalVolume string, protocolRevenue string)
+
+	// Snapshot сохраняет дамп БД (если поддерживается реализацией).
+	Snapshot() error
 }

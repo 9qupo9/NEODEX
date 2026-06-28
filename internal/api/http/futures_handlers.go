@@ -10,15 +10,18 @@ import (
 
 // FuturesOrderRequest — структура входящего JSON для создания фьючерсного ордера.
 type FuturesOrderRequest struct {
-	AccountID  string `json:"accountId"` // Кто выставляет
-	Base       string `json:"base"`      // Базовый актив
-	Quote      string `json:"quote"`     // Котируемый актив
-	Side       string `json:"side"`      // BUY или SELL (Long/Short)
-	Type       string `json:"type"`      // LIMIT или MARKET
-	Price      string `json:"price"`     // Цена
-	Qty        string `json:"qty"`       // Общее количество
-	Leverage   int    `json:"leverage"`  // Плечо
-	MarginMode string `json:"marginMode"`// ISOLATED или CROSS
+	AccountID    string `json:"accountId"`    // Кто выставляет
+	Base         string `json:"base"`         // Базовый актив
+	Quote        string `json:"quote"`        // Котируемый актив
+	Side         string `json:"side"`         // BUY или SELL (Long/Short)
+	Type         string `json:"type"`         // LIMIT, MARKET, STOP_LIMIT, TAKE_PROFIT
+	TimeInForce  string `json:"timeInForce"`  // GTC, IOC, FOK
+	Price        string `json:"price"`        // Цена
+	TriggerPrice string `json:"triggerPrice"` // Триггерная цена
+	Qty          string `json:"qty"`          // Общее количество
+	Leverage     int    `json:"leverage"`     // Плечо
+	MarginMode   string `json:"marginMode"`   // ISOLATED или CROSS
+	Signature    string `json:"signature"`    // Web3 подпись (EIP-712)
 }
 
 // HandlePlaceFuturesOrder (POST /api/v1/futures/order)
@@ -36,9 +39,10 @@ func (h *Handlers) HandlePlaceFuturesOrder(w http.ResponseWriter, r *http.Reques
 
 	price, _ := decimal.NewFromString(req.Price)
 	qty, _ := decimal.NewFromString(req.Qty)
+	triggerPrice, _ := decimal.NewFromString(req.TriggerPrice)
 
 	pair := domain.Pair{BaseAsset: req.Base, QuoteAsset: req.Quote}
-	order := domain.NewOrder(id.New(), req.AccountID, pair, domain.Side(req.Side), domain.OrderType(req.Type), price, qty)
+	order := domain.NewOrder(id.New(), req.AccountID, pair, domain.Side(req.Side), domain.OrderType(req.Type), price, qty, triggerPrice, req.TimeInForce)
 	
 	order.IsFutures = true
 	order.Leverage = req.Leverage

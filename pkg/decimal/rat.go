@@ -1,8 +1,10 @@
 package decimal
 
 import (
+	"encoding/json"
 	"fmt"
 	"math/big"
+	"strings"
 )
 
 // Decimal — это обертка вокруг math/big.Rat для высокоточных финансовых вычислений.
@@ -38,10 +40,17 @@ func MustParse(s string) Decimal {
 	return d
 }
 
-// NewFromInt создает Decimal из обычного int64.
-// TODO: Расширить поддержку для uint64 и big.Int для совместимости со смарт-контрактами (ERC20).
 func NewFromInt(i int64) Decimal {
 	return Decimal{r: big.NewRat(i, 1)}
+}
+
+// NewFromFloat создает Decimal из float64.
+func NewFromFloat(f float64) Decimal {
+	r := new(big.Rat).SetFloat64(f)
+	if r == nil {
+		panic("invalid float64 for decimal")
+	}
+	return Decimal{r: r}
 }
 
 // Add прибавляет другое значение Decimal и возвращает новый Decimal.
@@ -99,4 +108,37 @@ func (d Decimal) IsZero() bool {
 func (d Decimal) Copy() Decimal {
 	res := new(big.Rat).Set(d.r)
 	return Decimal{r: res}
+}
+
+// MarshalJSON реализует интерфейс json.Marshaler.
+func (d Decimal) MarshalJSON() ([]byte, error) {
+	if d.r == nil {
+		return []byte(`"0"`), nil
+	}
+	s := d.r.FloatString(8)
+	// Убираем лишние нули справа
+	if strings.Contains(s, ".") {
+		s = strings.TrimRight(strings.TrimRight(s, "0"), ".")
+	}
+	return []byte(`"` + s + `"`), nil
+}
+
+// UnmarshalJSON реализует интерфейс json.Unmarshaler.
+func (d *Decimal) UnmarshalJSON(b []byte) error {
+	var s string
+	if err := json.Unmarshal(b, &s); err != nil {
+		// Попробуем прочитать как число, если оно не в строке (для гибкости)
+		var f float64
+		if err2 := json.Unmarshal(b, &f); err2 == nil {
+			s = fmt.Sprintf("%v", f)
+		} else {
+			return err
+		}
+	}
+	parsed, err := NewFromString(s)
+	if err != nil {
+		return err
+	}
+	d.r = parsed.r
+	return nil
 }

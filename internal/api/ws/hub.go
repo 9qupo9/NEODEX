@@ -105,3 +105,14 @@ func (sh *ShardedHub) GetShard() *Shard {
 	rnd := binary.LittleEndian.Uint32(b[:])
 	return sh.shards[rnd%sh.shardCount]
 }
+
+// GetTotalClients возвращает общее количество активных WebSocket соединений по всем шардам.
+func (sh *ShardedHub) GetTotalClients() int {
+	total := 0
+	for _, shard := range sh.shards {
+		shard.mu.Lock()
+		total += len(shard.clients)
+		shard.mu.Unlock()
+	}
+	return total
+}
