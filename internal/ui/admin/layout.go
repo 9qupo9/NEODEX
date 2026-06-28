@@ -364,10 +364,10 @@ func RenderLayout() string {
     <main class="main-content">
         <div id="tab-overview" class="tab-content active">
             <header class="header">
-                <h1>Системный Обзор</h1>
+                <h1>System Overview</h1>
                 <div style="display:flex; gap:16px; align-items:center;">
                     <div class="badge badge-success">ALL SYSTEMS OPERATIONAL</div>
-                    <button class="btn-action btn-info" onclick="showSecurityModal()">АУДИТ БЕЗОПАСНОСТИ</button>
+                    <button class="btn-action btn-info" onclick="showSecurityModal()">SECURITY AUDIT</button>
                 </div>
             </header>
 
@@ -380,8 +380,8 @@ func RenderLayout() string {
 
         <div id="tab-users" class="tab-content">
             <header class="header">
-                <h1>Пользователи</h1>
-                <div class="badge badge-info">УПРАВЛЕНИЕ АККАУНТАМИ</div>
+                <h1>Users</h1>
+                <div class="badge badge-info">ACCOUNT MANAGEMENT</div>
             </header>
             <div id="users-container"></div>
         </div>

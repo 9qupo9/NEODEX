@@ -47,7 +47,7 @@ func RenderScripts() string {
         function showModal(title, message) {
             document.getElementById('modal-title').innerText = title;
             document.getElementById('modal-content').innerHTML = message;
-            document.getElementById('modal-actions').innerHTML = '<button class="btn-side" onclick="closeModal()">Закрыть</button>';
+            document.getElementById('modal-actions').innerHTML = '<button class="btn-side" onclick="closeModal()">Close</button>';
             document.getElementById('global-modal').classList.add('active');
         }
 
@@ -62,8 +62,8 @@ func RenderScripts() string {
                 html += '<div style="margin-bottom:10px;"><label style="color:#aaa; font-size:11px; text-transform:uppercase;">' + f.label + '</label><br><input type="text" id="prompt-input-' + i + '" class="modal-input" placeholder="' + (f.placeholder || '') + '" value="' + (f.value || '') + '"></div>';
             });
             document.getElementById('modal-content').innerHTML = html;
-            document.getElementById('modal-actions').innerHTML = '<button class="btn-side" onclick="closeModal()">Отмена</button>' +
-                '<button class="btn-action btn-info" style="font-size: 13px; padding: 8px 16px;" id="prompt-confirm-btn">Подтвердить</button>';
+            document.getElementById('modal-actions').innerHTML = '<button class="btn-side" onclick="closeModal()">Cancel</button>' +
+                '<button class="btn-action btn-info" style="font-size: 13px; padding: 8px 16px;" id="prompt-confirm-btn">Confirm</button>';
             document.getElementById('global-modal').classList.add('active');
             
             document.getElementById('prompt-confirm-btn').onclick = () => {
@@ -82,23 +82,22 @@ func RenderScripts() string {
                 });
                 
                 if (!res.ok) {
-                    showModal('Ошибка Сервера', 'Код ошибки: ' + res.status + '.<br>Вы перезапустили сервер (go run .) после обновления?');
+                    showModal('Server Error', 'Error code: ' + res.status + '.<br>Did you restart the server (go run .) after updating?');
                     return;
                 }
                 
                 if (action === 'snapshot') {
-                    showModal('Снапшот Создан', 'Снапшот AOF успешно создан и данные сжаты!');
+                    showModal('Snapshot Created', 'AOF snapshot successfully created and data compacted!');
                 } else if (action === 'clear_cache') {
-                    showModal('Очистка Логов', 'Системные логи успешно очищены!');
+                    showModal('Clear Logs', 'System logs successfully cleared!');
                 }
                 
-                // Сразу запрашиваем метрики, чтобы обновить UI без задержки
                 if (action === 'toggle_trading') {
                     fetchMetrics();
                 }
             } catch (e) {
                 console.error("Action error", e);
-                showModal('Ошибка Сети', 'Сервер недоступен. Проверьте подключение.');
+                showModal('Network Error', 'Server unreachable. Check connection.');
             }
         }
 
@@ -128,11 +127,11 @@ func RenderScripts() string {
             const data = await res.json();
             const container = document.getElementById('users-container');
             if(!data || data.length === 0) {
-                container.innerHTML = '<div class="glass-panel" style="padding:20px; text-align:center; color:#888;">Нет пользователей</div>';
+                container.innerHTML = '<div class="glass-panel" style="padding:20px; text-align:center; color:#888;">No users</div>';
                 return;
             }
             let html = '<div class="glass-panel" style="padding:0;"><table class="glass-table">';
-            html += '<tr><th>Адрес Аккаунта</th><th>USDT Баланс</th><th>Действия</th></tr>';
+            html += '<tr><th>Account Address</th><th>USDT Balance</th><th>Actions</th></tr>';
             data.forEach(u => {
                 let rawUsdt = u.Balances && u.Balances.USDT ? parseFloat(u.Balances.USDT) : 0;
                 let usdtStr = "0.00";
@@ -145,17 +144,17 @@ func RenderScripts() string {
                 html += '<tr>';
                 html += '<td style="font-family:monospace; color:#E2E8F0;">' + u.Address;
                 if (u.IsBlocked) {
-                    html += ' <span class="badge badge-danger" style="display:inline-block; margin-left:10px;">Заблокирован</span>';
+                    html += ' <span class="badge badge-danger" style="display:inline-block; margin-left:10px;">Blocked</span>';
                 }
                 html += '</td>';
                 html += '<td style="color:#00FF66; font-weight: bold;">$' + usdtStr + '</td>';
                 html += '<td>';
                 html += '<div style="display:flex; gap:8px;">';
-                html += '<button class="btn-action" onclick="showModal(\'Аудит\', \'Функция аудита кошелька в разработке\')">Аудит</button>';
+                html += '<button class="btn-action" onclick="showModal(\'Audit\', \'Wallet audit feature in development\')">Audit</button>';
                 if (u.IsBlocked) {
-                    html += '<button class="btn-action btn-info" onclick="toggleBlock(\'' + u.Address + '\', false)">Разблокировать</button>';
+                    html += '<button class="btn-action btn-info" onclick="toggleBlock(\'' + u.Address + '\', false)">Unblock</button>';
                 } else {
-                    html += '<button class="btn-action btn-danger" onclick="toggleBlock(\'' + u.Address + '\', true)">Заблокировать</button>';
+                    html += '<button class="btn-action btn-danger" onclick="toggleBlock(\'' + u.Address + '\', true)">Block</button>';
                 }
                 html += '</div></td>';
                 html += '</tr>';
@@ -173,12 +172,12 @@ func RenderScripts() string {
                 });
                 loadUsers();
                 if (block) {
-                    showModal('Блокировка', 'Аккаунт ' + address.substring(0,6) + '... успешно заблокирован.');
+                    showModal('Block', 'Account ' + address.substring(0,6) + '... successfully blocked.');
                 } else {
-                    showModal('Разблокировка', 'Аккаунт ' + address.substring(0,6) + '... успешно разблокирован.');
+                    showModal('Unblock', 'Account ' + address.substring(0,6) + '... successfully unblocked.');
                 }
             } catch (e) {
-                showModal('Ошибка', 'Не удалось изменить статус аккаунта.');
+                showModal('Error', 'Failed to change account status.');
             }
         }
 
@@ -186,15 +185,15 @@ func RenderScripts() string {
 
         function showSecurityModal() {
             let html = '<div style="margin-bottom: 10px; padding: 12px; background: rgba(0, 255, 102, 0.05); border: 1px solid rgba(0, 255, 102, 0.2); border-radius: 8px;">' +
-                '<strong style="color: #00FF66;">WAF (Сетевой экран):</strong> Активен и функционирует штатно.' +
+                '<strong style="color: #00FF66;">WAF (Firewall):</strong> Active and functioning normally.' +
                 '</div>' +
                 '<div style="margin-bottom: 10px; padding: 12px; background: rgba(0, 153, 255, 0.05); border: 1px solid rgba(0, 153, 255, 0.2); border-radius: 8px;">' +
-                '<strong style="color: #0099ff;">Авторизации:</strong> Подозрительной активности не выявлено. Все входы авторизованы.' +
+                '<strong style="color: #0099ff;">Authorizations:</strong> No suspicious activity detected. All logins authorized.' +
                 '</div>' +
                 '<div style="margin-bottom: 10px; padding: 12px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px;">' +
-                '<strong style="color: #E2E8F0;">Шифрование БД:</strong> AES-256 (Ключи актуальны).' +
+                '<strong style="color: #E2E8F0;">DB Encryption:</strong> AES-256 (Keys up-to-date).' +
                 '</div>';
-            showModal('Аудит Безопасности', html);
+            showModal('Security Audit', html);
         }
 
 		async function fetchMetrics() {
@@ -256,7 +255,7 @@ func RenderScripts() string {
 					logsContainer.innerHTML = logsHTML;
 					logsContainer.scrollTop = logsContainer.scrollHeight;
 				} else {
-                    logsContainer.innerHTML = '<div><span class="log-info">Логи отсутствуют</span></div>';
+                    logsContainer.innerHTML = '<div><span class="log-info">No logs</span></div>';
                 }
 			} catch (e) {
 				console.error("Fetch error", e);

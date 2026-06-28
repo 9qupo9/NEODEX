@@ -38,27 +38,27 @@ func RenderMetrics() string {
 	return `
             <div class="panel metrics-container">
                 <div class="metric-box">
-                    <div class="metric-label">ОБЪЕМ (24Ч)</div>
+                    <div class="metric-label">VOLUME (24H)</div>
                     <div class="metric-val" id="metric-volume">0.00</div>
                 </div>
                 <div class="metric-box">
-                    <div class="metric-label">ВЫРУЧКА</div>
+                    <div class="metric-label">REVENUE</div>
                     <div class="metric-val" id="metric-revenue">0.00</div>
                 </div>
                 <div class="metric-box">
-                    <div class="metric-label">ОРДЕРА В СТАКАНЕ</div>
+                    <div class="metric-label">ORDERBOOK</div>
                     <div class="metric-val" id="metric-orders">0</div>
                 </div>
                 <div class="metric-box">
-                    <div class="metric-label">РЕГИСТРАЦИИ</div>
+                    <div class="metric-label">REGISTRATIONS</div>
                     <div class="metric-val" id="metric-users">0</div>
                 </div>
                 <div class="metric-box">
-                    <div class="metric-label">WS КЛИЕНТЫ</div>
+                    <div class="metric-label">WS CLIENTS</div>
                     <div class="metric-val" id="metric-ws">0</div>
                 </div>
                 <div class="metric-box">
-                    <div class="metric-label">TCP БОТЫ</div>
+                    <div class="metric-label">TCP BOTS</div>
                     <div class="metric-val" id="metric-bots">0</div>
                 </div>
             </div>`

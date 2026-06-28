@@ -31,9 +31,9 @@ func GetLogsCSS() string {
 func RenderLogs() string {
 	return `
             <div class="panel logs-panel">
-                <div class="panel-title">ЖУРНАЛ СОБЫТИЙ</div>
+                <div class="panel-title">EVENT LOG</div>
                 <div class="logs-container" id="sysLogs">
-                    <div><span class="log-time"></span> <span class="log-info">[СИСТЕМА]</span> Ожидание данных...</div>
+                    <div><span class="log-time"></span> <span class="log-info">[SYSTEM]</span> Waiting for data...</div>
                 </div>
             </div>`
 }

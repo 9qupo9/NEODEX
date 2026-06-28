@@ -178,34 +178,34 @@ func RenderSidebar() string {
             NEODEX
         </a>
         <nav>
-            <a href="#" class="nav-link active" onclick="switchTab('overview')">Системный Обзор</a>
-            <a href="#" class="nav-link" onclick="switchTab('users')">Пользователи</a>
+            <a href="#" class="nav-link active" onclick="switchTab('overview')">System Overview</a>
+            <a href="#" class="nav-link" onclick="switchTab('users')">Users</a>
         </nav>
         
         <div class="sidebar-controls">
-            <div class="side-heading">Системные Команды</div>
+            <div class="side-heading">System Commands</div>
             <button class="btn-side" onclick="sendAction('snapshot')">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-                Создать Снапшот
+                Create Snapshot
             </button>
             <button class="btn-side" onclick="sendAction('clear_cache')">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                Очистить Логи
+                Clear Logs
             </button>
             
-            <div class="side-heading" style="margin-top: 16px;">Ядро Биржи</div>
+            <div class="side-heading" style="margin-top: 16px;">Exchange Engine</div>
             <button id="btn-start" class="btn-side btn-start active" onclick="startTrading()">
                 <div class="led-indicator"></div>
-                Запустить Торги
+                Start Trading
             </button>
             <button id="btn-stop" class="btn-side btn-stop" onclick="stopTrading()" disabled>
                 <div class="led-indicator"></div>
-                Остановить Торги
+                Stop Trading
             </button>
         </div>
 
         <div class="sidebar-bottom">
-            <a href="/" class="logout-btn" onclick="document.cookie='admin_session=; Max-Age=0; path=/;'">Выйти</a>
+            <a href="/" class="logout-btn" onclick="document.cookie='admin_session=; Max-Age=0; path=/;'">Logout</a>
         </div>
     </aside>`
 }
